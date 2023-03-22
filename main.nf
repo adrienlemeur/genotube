@@ -41,7 +41,7 @@ mf = new myFunctions()
 workflow {
 	main:
 
-		mf.checkParameters(params.variant_caller, params.contam_check, params.species, params.taxonomy, params.tree_build, params.FORCE, params.SKIP, params.download_K2_DB)
+		mf.checkParameters(params.variant_caller, params.contam_check, params.species, params.taxonomy, params.tree_build, params.FORCE, params.SKIP, params.REMOVE, params.download_K2_DB)
 
 		initialisation()
 		index()
@@ -58,7 +58,7 @@ workflow {
 
 		profiling(process_vcf.out.all_ann_vcf, process_vcf.out.all_raw_vcf, index.out.binExec_emit_signal, index.out.samtools_picard_index)
 
-//		cleaner(process_fastq.out.garbage, align.out.garbage, process_bam.out.garbage, process_vcf.out.garbage)
+        cleaner(align.out.all_mapping, process_vcf.out.all_ann_vcf, profiling.out.strain_info)
 
 		build_tree(process_vcf.out.all_ann_vcf, profiling.out.strain_info, index.out.samtools_picard_index)
 		multiqc_report(process_vcf.out.end_signal, process_vcf.out.all_ann_vcf)

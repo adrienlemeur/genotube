@@ -82,6 +82,11 @@ process buildSnpeffDB {
 	zcat $referenceSequence > \$path_to_config/data/genomes/${referenceSequence.simpleName}.fa
 	zcat $referenceAnnotation > \$path_to_config/data/${referenceSequence.simpleName}/genes.gff
 
+	echo "tteeeeeeeeest"
+	echo "$referenceSequence"
+	echo "$referenceSequence.simpleName"
+	echo "$referenceAnnotation"
+	
 	snpEff build -c $snpeffConfig_file -v ${referenceSequence.simpleName} -nodownload -d
 	"""
 }

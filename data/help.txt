@@ -7,7 +7,7 @@ Genotube Analysis Pipeline. Started on 12-11-2021
 [AUTHORS]:
 Adrien Le Meur
 Fiona Hak
-with the help of Guislaine Refrégier & Rima Zein Eddine
+with the help of Guislaine Refrï¿½gier & Rima Zein Eddine
 
 [VERSION]: 4.0
 [NAME]: Washed Ashore
@@ -67,6 +67,7 @@ with the help of Guislaine Refrégier & Rima Zein Eddine
 --FORCE ['DOWNLOAD', 'TRIM', 'MAP', 'CALL' and/or 'ANN']	Comma separated list of step to FORCE, even if files already have
 --SKIP ['COVERAGE_CHECK', 'PROFILING']			Comma separated lsit of step to SKIP / do not perform. 
 								Profiling default : discards sample with mean coverage < 80% and sequencing depth < 10.
+--REMOVE	['FASTQ', 'BAM', 'VCF']			Comma separated list of type files to REMOVE
 
 #REFERENCE SEQUENCE OPTIONS
 --referenceSequence [file]			Compressed fasta sequence for mapping. Default : H37Rv reference strain (NC_000962.3 assembly) in ./data/mtuberculosis/genomes/reference/H37Rv.fa.gz.
@@ -82,6 +83,7 @@ with the help of Guislaine Refrégier & Rima Zein Eddine
 #VARIANT CALLING OPTIONS
 --species ['MTBC', 'other']				Species to consider. Lineage and sublineage calling and in silico AMR prediction are only implemented for M. tuberculosis complex.
 --variant_caller ['gatk', 'samtools' or 'freebayes']	Variant caller to use (gatk haplotype caller, samtools mpileup or freebayes). Default : gatk
+--deletion_region : deletion region caller. It returns a vcf file as output.
 --additional_variants []				Not implemented yet.
 
 #TREE BUILD

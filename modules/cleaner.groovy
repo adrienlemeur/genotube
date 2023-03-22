@@ -2,91 +2,23 @@
 
 nextflow.enable.dsl=2
 
-//delete fastq files when finished to be used
-process deleteFastq {
+process removeFastq {
 	label 'script'
 
 	input:
-	tuple val(sample), file(f1), file(f2)
+	tuple val(sample), file("${sample}.bam")
 	val(results)
-  
-	when:
-	!params.keep_fastq && !params.keep_raw_fastq
-
-	script:  
-	"""
-	rm -rf ${results}/FQ_PE_RAW/${sample}*.fastq.gz ${results}/FQ_SE_RAW/${sample}*.fastq.gz
-	"""
-}
-
-//delete fastq trimmed files when finished to be used
-process deleteTrimmedFastq {
-	label 'script'
-
-	input:
-	tuple val(sample), file(bam)
-  	val(results)
 
 	when:
-	!params.keep_fastq && !params.keep_trimmed_fastq
-
-	script:
- 	"""
-	rm -rf ${results}/FQ_PE_TRIMMED/${sample}*.fastq.gz ${results}/FQ_SE_TRIMMED/${sample}*.fastq.gz
-  	"""
-}
-
-//delete raw bam if flag
-process deleteBam {
-	label 'script'
-
-	input:
-	tuple val(sample), file("${sample}.vcf.gz")
-	val(results)
-  
-	when:
-	!params.keep_bam && !params.keep_raw_bam
+	!params.help && mf.checkFORCE('FASTQ', params.REMOVE)
 
 	script:
 	"""
-	rm -rf ${results}/BAM_RAW/${sample}*.bam
+	rm ${results}/FASTQ/RAW/${sample}* ${results}/FASTQ/TRIMMED/${sample}*
 	"""
 }
 
-//delete processed bam if flag
-process deleteProcessedBam {
-	label 'script'
-
-	input:
-	tuple val(sample), file(vcf)
-	val(results)
-  
-	when:
-	!params.keep_bam && !params.keep_processed_bam
-
-	script:
-	"""
-	rm -rf ${results}/BAM/${sample}*.bam
-	"""
-}
-
-process deleteVCF {
-	label 'script'
-
-	input:
-	tuple val(sample), file(vcf)
-	val(results)
-  
-	when:
-	!params.keep_vcf
-
-	script:
-	"""
-	rm -rf ${results}/VCF_RAW/${sample}*.vcf.gz
-	"""
-}
-
-process deleteCoverage {
+process removeBam {
 	label 'script'
 
 	input:
@@ -94,48 +26,48 @@ process deleteCoverage {
 	val(results)
 
 	when:
-	!params.keep_reports && !params.keep_coverage
+	!params.help && mf.checkFORCE('BAM', params.REMOVE)
 
 	script:
 	"""
-	rm -rf ${results}/BAM_COVERAGE/${sample}*_QC.txt
+	rm ${results}/BAM/RAW/${sample}*
+	if test -f '$results/BAM/FILTERED/*.bam'; then
+		rm ${results}/BAM/FILTERED/${sample}*
+	fi
 	"""
 }
 
-process deleteMetrics {
+process removeVCF {
 	label 'script'
 
 	input:
-	tuple val(sample), file(vcf)
+	tuple val(sample), file(vcf), file("all_strain_info.txt")
 	val(results)
-  
+
 	when:
-	!params.keep_reports && !params.keep_metricsreports
-  	
+	!params.help && mf.checkFORCE('VCF', params.REMOVE)
+
 	script:
 	"""
-	rm -rf ${results}/ALL_REPORTS/${sample}*_dedup_metrics.txt
+	rm ${results}/VCF/RAW/${sample}* ${results}/VCF/FILTERED/${sample}*
 	"""
 }
+
+mf = new myFunctions()
 
 workflow cleaner {
-	take: trim_info
-	take: bam
-	take: process_bam
-	take: process_vcf
+	take: all_mapping
+	take: all_ann_vcf
 	take: strain_info
 
 	main:
-		results = file(params.results)
 
-		deleteFastq(trim_info, results)
-		deleteTrimmedFastq(bam, results)
+	results = file(params.results)
 
-		deleteBam(process_bam, results)
-		deleteProcessedBam(process_vcf, results)
+	removeFastq(all_mapping, results)
 
-		deleteVCF(process_vcf, results)
+	removeBam(all_ann_vcf, results)
 
-		deleteCoverage(process_vcf, results)
-		deleteMetrics(process_vcf, results)
+	removeVCF(strain_info, results)
+
 }
