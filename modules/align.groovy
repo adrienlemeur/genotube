@@ -27,7 +27,6 @@ process paired_alignement {
 	if(!params.target_region)
 		"""
 		bwa-mem2 mem -t ${task.cpus} $indexName $f1 $f2 -R "@RG\tID:$sample\tLB:LIB\tPL:Illumina\tPU:UNIT\tSM:$sample" 2>> $results/ALL_REPORTS/BAM/RAW/${sample}.align.log | \
-			samclip --ref ${fasta} | \
 			samtools view -@ ${task.cpus} -bSh -q 30 -F0x4 --no-PG 2>> $results/ALL_REPORTS/BAM/RAW/${sample}.align.log | \
 			samtools sort -@ ${task.cpus} --no-PG -o ${sample}.bam
 
@@ -39,7 +38,6 @@ process paired_alignement {
 	//filter out reads non overlapping with target regions
 		"""
 		bwa-mem2 mem -t ${task.cpus} $indexName $f1 $f2 -R "@RG\tID:$sample\tLB:LIB\tPL:Illumina\tPU:UNIT\tSM:$sample" 2>> $results/ALL_REPORTS/BAM/RAW/${sample}.align.log | \
-			samclip --ref ${fasta} | \
 			samtools view -@ ${task.cpus} -bSh -q 30 -F0x4 -L $region --no-PG 2>> $results/ALL_REPORTS/BAM/RAW/${sample}.align.log | \
 			samtools sort -@ ${task.cpus} --no-PG -o ${sample}.bam
 
@@ -74,7 +72,6 @@ process single_alignement {
 	if(!params.target_region)
 		"""
 		bwa-mem2 mem -t ${task.cpus} $indexName $f1 -R "@RG\tID:$sample\tLB:LIB\tPL:Illumina\tPU:UNIT\tSM:$sample" 2>> $results/ALL_REPORTS/BAM/RAW/${sample}.align.log | \
-			samclip --ref ${fasta} | \
 			samtools view -@ ${task.cpus} -bSh -q 30 -F0x4 --no-PG 2>> $results/ALL_REPORTS/BAM/RAW/${sample}.align.log | \
 			samtools sort -@ ${task.cpus} --no-PG -o ${sample}.bam
 
@@ -86,7 +83,6 @@ process single_alignement {
 	//filter out reads non overlapping with target regions
 		"""
 		bwa-mem2 mem -t ${task.cpus} $indexName $f1 -R "@RG\tID:$sample\tLB:LIB\tPL:Illumina\tPU:UNIT\tSM:$sample" 2>> $results/ALL_REPORTS/BAM/RAW/${sample}.align.log | \
-			samclip --ref ${fasta} | \
 			samtools view -@ ${task.cpus} -bSh -q 30 -F0x4 --no-PG -L $region 2>> $results/ALL_REPORTS/BAM/RAW/${sample}.align.log | \
 			samtools sort -@ ${task.cpus} --no-PG -o ${sample}.bam
 
