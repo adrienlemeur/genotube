@@ -116,6 +116,7 @@ workflow download {
 			.subscribe{ it -> mf.createSymLink(it.toString(), results.toString()+"/FASTQ/RAW") }
 		foreign_fastq_paired.map{ it -> [ it[1], it[2] ] }
 			.flatten().subscribe{ it -> mf.createSymLink(it.toString(), results.toString()+"/FASTQ/RAW") }
+		foreign_fastq_paired.view()
 
 		//query NCBI and download the fastq
 		queryNCBI(SRA, results, foreign_fastq_single.collect().ifEmpty(true), foreign_fastq_paired.collect().ifEmpty(true))

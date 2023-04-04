@@ -181,18 +181,16 @@ process taxoFilterPaired {
 
 	script:
 	"""
-	mv $f1 ${sample}.classified_1.fastq.gz
-	mv $f1 ${sample}.classified_2.fastq.gz
-	#kraken2 --db $krakenDB_path --quick --paired $f1 $f2 --use-names \
-	#	--classified-out ${sample}.classified#.fastq --unclassified-out ${sample}.unclassified#.fastq \
-	#	--report ${sample}.taxo.log --thread ${task.cpus}
+	kraken2 --db $krakenDB_path --quick --paired $f1 $f2 --use-names \
+		--classified-out ${sample}.classified#.fastq --unclassified-out ${sample}.unclassified#.fastq \
+		--report ${sample}.taxo.log --thread ${task.cpus}
 
 	#more efficient compression ? rebuilt a container with pigz ?
-	#gzip -1 ${sample}.classified_1.fastq; gzip -1 ${sample}.classified_2.fastq
-	#gzip -1 ${sample}.unclassified_1.fastq; gzip -1 ${sample}.unclassified_2.fastq
+	gzip -1 ${sample}.classified_1.fastq; gzip -1 ${sample}.classified_2.fastq
+	gzip -1 ${sample}.unclassified_1.fastq; gzip -1 ${sample}.unclassified_2.fastq
 
 	#moves fastq screen report to the report folder for aggregation with multiqc
-	#cp ${sample}.taxo.log $results/ALL_REPORTS/FASTQ/TAXOFILTER
+	cp ${sample}.taxo.log $results/ALL_REPORTS/FASTQ/TAXOFILTER
 	"""
 }
 
@@ -253,8 +251,11 @@ process pairedNormFastq {
 	else
 	"""
 	#not the cleanest way but simple
-	ln -s $f1 ${sample}_1.normed.fastq.gz
-	ln -s $f2 ${sample}_2.normed.fastq.gz
+	ln -s $f1 ${sample}_1.filtered.fastq.gz
+	ln -s $f1 $results/FASTQ/TRIMMED/${sample}_1.filtered.fastq.gz
+
+	ln -s $f2 ${sample}_2.filtered.fastq.gz
+	ln -s $f2 $results/FASTQ/TRIMMED/${sample}_2.filtered.fastq.gz
 	"""
 }
 
