@@ -90,14 +90,17 @@ workflow download {
 
 		foreign_fastq_single = Channel.empty()
 		foreign_fastq_paired = Channel.empty()
-//.map{it -> [it.simpleName.split("_1\$|_2|\$|_R1|\$|_R2|\$")[0], it.findAll{ s -> s ==~ / _1 / }​ ]}.groupTuple().view()
+
 		if(params.fastq){
-			Channel.fromPath([params.fastq+"/*.{fq,fastq}.gz", results+"/FASTQ/RAW/*.{fq,fastq}.gz"], followLinks: true)
-				.map{it -> [it.simpleName.split("_1|_2|_R1|_R2")[0], it ]}.groupTuple().map{it -> [ it[0], it[1].flatten()[0] ] }.groupTuple()
+			Channel.fromPath(params.fastq+"/*.{fq,fastq}.gz", followLinks: true).map{it -> [it.simpleName.split("_1|_2|_R1|_R2")[0], it ]}
+			.groupTuple().map{it -> [ it[0], it[1].flatten() ] }
+			.mix(Channel.fromPath(results+"/FASTQ/RAW/*.{fq,fastq}.gz", followLinks: true).map{it -> [it.simpleName.split("_1|_2|_R1|_R2")[0], it ]}.groupTuple().map{it -> [ it[0], it[1].flatten() ] })
+			.groupTuple().map{it -> [it[0], it[1][0].size() > it[1][1].size() ? it[1][0] : it[1][1] ] } //chose paired over single end
 				.branch{
 					paired: it[1].size() == 2
 					single: it[1].size() == 1
-				}.set{ temp }
+				}
+				.set{ temp }
 		} else {
 			Channel.fromPath(results+"/FASTQ/RAW/*.{fq,fastq}.gz", followLinks: true)
 				.map{it -> [it.simpleName.split("_1|_2|_R1|_R2")[0], it]}.groupTuple().branch{
@@ -108,7 +111,6 @@ workflow download {
 
 		foreign_fastq_single = temp.single.map{it -> [ it[0], it[1][0] ] }
 		foreign_fastq_paired = temp.paired.map{it -> [ it[0], it[1][0], it[1][1] ] }
-		foreign_fastq_paired.view()
 
 		foreign_fastq_single.map{ it -> it[1] }
 			.subscribe{ it -> mf.createSymLink(it.toString(), results.toString()+"/FASTQ/RAW") }
