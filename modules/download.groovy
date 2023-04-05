@@ -95,7 +95,8 @@ workflow download {
 			Channel.fromPath(params.fastq+"/*.{fq,fastq}.gz", followLinks: true).map{it -> [it.simpleName.split("_1|_2|_R1|_R2")[0], it ]}
 			.groupTuple().map{it -> [ it[0], it[1].flatten() ] }
 			.mix(Channel.fromPath(results+"/FASTQ/RAW/*.{fq,fastq}.gz", followLinks: true).map{it -> [it.simpleName.split("_1|_2|_R1|_R2")[0], it ]}.groupTuple().map{it -> [ it[0], it[1].flatten() ] })
-			.groupTuple().map{it -> [it[0], it[1][0].size() > it[1][1].size() ? it[1][0] : it[1][1] ] } //chose paired over single end
+			.groupTuple()
+			.map{it -> [it[0], ((it[1][0] ? it[1][0].size() : 0) > (it[1][1] ? it[1][1].size() : 0) ? it[1][0] : it[1][1]) ] } //chose paired over single end
 				.branch{
 					paired: it[1].size() == 2
 					single: it[1].size() == 1
@@ -116,7 +117,6 @@ workflow download {
 			.subscribe{ it -> mf.createSymLink(it.toString(), results.toString()+"/FASTQ/RAW") }
 		foreign_fastq_paired.map{ it -> [ it[1], it[2] ] }
 			.flatten().subscribe{ it -> mf.createSymLink(it.toString(), results.toString()+"/FASTQ/RAW") }
-		foreign_fastq_paired.view()
 
 		//query NCBI and download the fastq
 		queryNCBI(SRA, results, foreign_fastq_single.collect().ifEmpty(true), foreign_fastq_paired.collect().ifEmpty(true))
@@ -134,7 +134,7 @@ workflow download {
 
 		//merge newly downloaded fastq channel with fastq alread stored in the fastq folder into a new flux (paired end)
 		all_paired_fastq = foreign_fastq_paired.mix(newly_download_paired)
-
+//			.groupTuple().map{it -> [it[0], it[1][0].size() > it[1][1].size() ? it[1][0] : it[1][1] ] } //chose paired over single end
 		//generate artificial fastq from fasta file
 		if(params.fasta) {
 			compressed = Channel.fromPath(params.fasta+"/*.{fna,fa,fasta}*gz", followLinks: true).map{it -> [ it.simpleName, true, it]}
