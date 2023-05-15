@@ -69,12 +69,13 @@ process resumeStrainInfo {
 	label 'script'
 
 	input:
+	tuple val(sample), file(vcf)
 	file(antibioProfile)
 	file(lineageProfile)
 	val(results)
 
 	output:
-	file("all_strain_info.txt")
+	tuple val(sample), file(vcf), file("all_strain_info.txt")
 	
 	when:
 	params.taxonomy == 'barcode'
@@ -206,7 +207,7 @@ workflow profiling {
 			getLineage(annotated_vcf, file(params.lineageSNP), results)
 			getAntibioRType(annotated_vcf, antibioResistanceList, binExec_emit_signal, results)
 
-			resumeStrainInfo(getAntibioRType.out.collect().ifEmpty(true), getLineage.out.collect().ifEmpty(true), results)
+			resumeStrainInfo(annotated_vcf, getAntibioRType.out.collect().ifEmpty(true), getLineage.out.collect().ifEmpty(true), results)
 			strain_info = resumeStrainInfo.out.ifEmpty(true)
 		}
 

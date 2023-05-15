@@ -19,11 +19,11 @@ class myFunctions {
 
 	}
 
-	public static boolean checkFORCE(String step, String FORCE) {
-		if( step in FORCE.tokenize(',') ){ return true } else { return false }
+	public static boolean checkFORCE(String selected_param, String OPTION) {
+		return selected_param in OPTION.tokenize(',')
 	}
 
-	public static void checkParameters(variant_caller, contam_check, species, taxonomy, treebuild, FORCE, SKIP, krakenDB){
+	public static void checkParameters(variant_caller, contam_check, species, taxonomy, treebuild, FORCE, SKIP, REMOVE, krakenDB){
 		def quit = false;
 
 		if( ! krakenDB in ['8G', '16G', 'none'] ){
@@ -69,6 +69,14 @@ class myFunctions {
 		def skipParameters = ['COVERAGE_CHECK', 'PROFILING', 'none'] as String[]
 		if(SKIP != 'empty' && ! SKIP.every{it -> it in skipParameters}) {
 			println "\n${SKIP.join(', ')} is not a valid argument for --SKIP. Should be a a comma separated list of 'COVERAGE_CHECK', 'PROFILING', and/or 'none' (default) ."
+			quit = true
+		}
+
+		if( REMOVE == true ){ println "\nNo argument following --REMOVE, set to 'none'" ; REMOVE = ['none'] ; } else { REMOVE = REMOVE?.tokenize(',') ; }
+
+		def removeParameters = ['FASTQ', 'BAM', 'VCF', 'none'] as String[]
+		if(REMOVE != 'empty' && ! REMOVE.every{it -> it in removeParameters}) {
+			println "\n${REMOVE.join(', ')} is not a valid argument for --REMOVE. Should be a a comma separated list of 'FASTQ', 'BAM', 'VCF' and/or 'none' (default) ."
 			quit = true
 		}
 

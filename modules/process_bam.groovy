@@ -142,6 +142,7 @@ process downloadKrakenDB {
 	}
 	db = params.prebuilt_K2_DB
 	"""
+	mkdir $data/Kraken2/${db}
 	wget ${database} -t ${task.cpus} -O ${db}.tar.gz
 
 	gunzip ${db}.tar.gz
@@ -224,56 +225,6 @@ process deduplication {
 	ln -s $results/BAM/FILTERED/${sample}.dedup.bam ${sample}.dedup.bam
 	"""
 }
-
-// TODO : MOVE TO VARIANT CALLER + REINTEGRATION BY FIONA
-/*
-process getDeletionRegion {
-	label 'delly'
-
-	input:
-	tuple val(sample), file(bam), file(bai)
-	tuple file(fasta), file(fai), file(dict)
-	val(results)
-
-	output:
-	tuple val(sample), file("${sample}_RD.bcf")
-
-	when:
-	params.RD && !mf.checkFile("$results/DELETION_REGION", sample, "vcf.gz")
-
-	script:
-	"""
-	delly call --svtype DEL -g $fasta $bam -q 20 -s 15 -o ${sample}_RD.bcf
-
-	rm -rf $results/${sample}_RD.bcf
-
-	mv ${sample}_RD.bcf $results/${sample}_RD.bcf
-	ln -s $results/${sample}_RD.bcf ${sample}_RD.bcf
-	"""
-}
-
-
-process bcfToVcf {
-	label 'bcftools'
-
-	input:
-	tuple val(sample), file(bcf)
-	val(results)
-
-	output:
-	tuple val(sample), file("${sample}_RD.vcf.gz")
-
-	when:
-	params.RD && !file("$results/DELETION_REGION/${sample}_RD.vcf.gz").exists()
-
-	script:
-	"""
-	bcftools convert -Oz -o ${sample}_RD.vcf.gz $bcf
-	rm -rf $results/${sample}_RD.vcf.gz
-	ln ${sample}_RD.vcf.gz $results/${sample}_RD.vcf.gz
-	"""
-}
-*/
 
 process statFastQC {
 	tag "$sample"
@@ -387,10 +338,6 @@ workflow process_bam {
 
 		//end of quality check triggers coverage file concatenation / should be fixed
 		resumeCoverage(bamChecked.collect().ifEmpty(true), results)
-
-		//sort deletion regions in vcf files
-		//getDeletionRegion(deduplication.out, index, results+"/DELETION_REGION")
-		//bcfToVcf(getDeletionRegion.out, results+"/DELETION_REGION")
 
 	emit:
 		all_processed_bam
