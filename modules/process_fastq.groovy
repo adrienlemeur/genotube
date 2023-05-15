@@ -251,8 +251,11 @@ process pairedNormFastq {
 	else
 	"""
 	#not the cleanest way but simple
-	ln -s $f1 ${sample}_1.normed.fastq.gz
-	ln -s $f2 ${sample}_2.normed.fastq.gz
+	ln -s $f1 ${sample}_1.filtered.fastq.gz
+	ln -s $f1 $results/FASTQ/TRIMMED/${sample}_1.filtered.fastq.gz
+
+	ln -s $f2 ${sample}_2.filtered.fastq.gz
+	ln -s $f2 $results/FASTQ/TRIMMED/${sample}_2.filtered.fastq.gz
 	"""
 }
 

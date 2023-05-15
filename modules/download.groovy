@@ -109,6 +109,7 @@ workflow download {
 	foreign_fastq_paired = temp.paired.map{it -> [ it[0], it[1][0], it[1][1] ] }
 
 	foreign_fastq_single.map{ it -> it[1] }
+
 			.subscribe{ it -> mf.createSymLink(it.toString(), results.toString()+"/FASTQ/RAW") }
 	foreign_fastq_paired.map{ it -> [ it[1], it[2] ] }
 			.flatten().subscribe{ it -> mf.createSymLink(it.toString(), results.toString()+"/FASTQ/RAW") }
