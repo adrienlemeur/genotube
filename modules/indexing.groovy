@@ -74,7 +74,7 @@ process buildSnpeffDB {
 	val(true)
 
 	when:
-	!params.help && !params.dry
+	!params.help && !params.dry && !params.noGFF
 
 	script:
 	"""
