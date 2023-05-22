@@ -35,7 +35,11 @@ process samtools_index {
 
 	script:
 	"""
-	zcat $fasta > ${fasta.simpleName}.fa
+	{ 
+		zcat $fasta > ${fasta.simpleName}.fa
+	} || {
+		mv $fasta ${fasta.simpleName}.fa
+       }
 	samtools faidx ${fasta.simpleName}.fa
 	"""
 }
