@@ -83,12 +83,6 @@ process variantCallingFreebayes {
 	"""
 }
 
-/*
-freebayes -f $fasta $bam --vcf ${sample}_freebayes.vcf --ploidy 2 -C 4 -m 30 --report-all-haplotype-alleles --use-reference-allele
-bcftools filter $vcf -i "(AF[0]>0.95 || AF[1] > 0.95) && (FORMAT/AD[:0]>=5 || FORMAT/AD[:1]>=5) && QUAL>30" --SnpGap 2 --IndelGap 9 --soft-filter FAIL --mode x -Oz -o ${sample}.filtered.vcf.gz
-
-*/
-
 process indexVCF {
 	tag "$sample"
 	label 'bcftools'

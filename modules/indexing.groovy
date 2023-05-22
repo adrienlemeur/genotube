@@ -78,7 +78,7 @@ process buildSnpeffDB {
 
 	script:
 	"""
-	path_to_config=\$(dirname \$(realpath snpEff.config)) #could clean this someday....
+	path_to_config=\$(dirname \$(realpath snpEff.config))
 
 	mkdir -p \$path_to_config/data/${referenceSequence.simpleName}
 	mkdir -p \$path_to_config/data/genomes
