@@ -142,7 +142,7 @@ process downloadKrakenDB {
 	}
 	db = params.prebuilt_K2_DB
 	"""
-	mkdir $data/Kraken2/${db}
+	mkdir -p $data/Kraken2/${db}
 	wget ${database} -t ${task.cpus} -O ${db}.tar.gz
 
 	gunzip ${db}.tar.gz
