@@ -25,6 +25,7 @@ process queryNCBI {
 
 	script:
 	"""
+	vdb-config
 	prefetch $run -N 1000
 
 	fasterq-dump $run --skip-technical

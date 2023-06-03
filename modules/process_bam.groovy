@@ -163,6 +163,10 @@ process taxoClass {
 	output:
 	tuple val(sample), file("${sample}.taxo.log")
 
+	when:
+	( (params.prebuilt_K2_DB == '8G' || params.prebuilt_K2_DB == '16G') && \
+	!file("$data/Kraken2/${params.prebuilt_K2_DB}/inspect.txt").exists() ) || custom_K2_DB
+
 	script:
 	if(params.custom_K2_DB){ DB = file(params.custom_K2_DB) }
 	if(params.custom_K2_DB)
