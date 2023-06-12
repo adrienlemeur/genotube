@@ -29,11 +29,11 @@ include { cleaner }		from		'./modules/cleaner.groovy'
 include { process_fastq }	from		'./modules/process_fastq.groovy'
 include { align }		from		'./modules/align.groovy'
 include { index }		from		'./modules/indexing.groovy'
-include { process_bam }	from		'./modules/process_bam.groovy'
+include { process_bam }	from			'./modules/process_bam.groovy'
 include { variant_calling }	from		'./modules/variant_calling.groovy'
-include { process_vcf }	from		'./modules/process_vcf.groovy'
+include { process_vcf }	from			'./modules/process_vcf.groovy'
 include { profiling }		from		'./modules/profiling.groovy'
-include { build_tree } 	from		'./modules/treebuild.groovy'
+include { build_tree } 	from			'./modules/treebuild.groovy'
 include { multiqc_report }	from		'./modules/multiqc_report.groovy'
 
 mf = new myFunctions()
@@ -58,7 +58,7 @@ workflow {
 
 		profiling(process_vcf.out.all_ann_vcf, process_vcf.out.all_raw_vcf, index.out.binExec_emit_signal, index.out.samtools_picard_index)
 
-        cleaner(align.out.all_mapping, process_vcf.out.all_ann_vcf, profiling.out.strain_info)
+        	cleaner(align.out.all_mapping, process_vcf.out.all_ann_vcf, profiling.out.strain_info)
 
 		build_tree(process_vcf.out.all_ann_vcf, profiling.out.strain_info, index.out.samtools_picard_index)
 		multiqc_report(process_vcf.out.end_signal, process_vcf.out.all_ann_vcf)

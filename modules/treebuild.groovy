@@ -116,11 +116,11 @@ process treeAnnotation {
 		outgroup = file(outgroup)
 		"""
 		gotree reroot outgroup -i full_tree.raxml.bestTree -l $outgroup > full_tree.rerooted.raxml.bestTree
-		pastml -t full_tree.rerooted.raxml.bestTree -d $strain_info -c lineage sublineage DR_type --prediction_method DOWNPASS --work_dir $results/TREE/ANN --upload_to_itol
+		pastml -t full_tree.rerooted.raxml.bestTree -d all_strain_info.txt -c lineage sublineage DR_type --prediction_method DOWNPASS --work_dir $results/TREE/ANN --upload_to_itol
 		"""
 	} else if (outgroup == false) {
 		"""
-		pastml -t $tree -d $strain_info -c lineage sublineage DR_type --prediction_method DOWNPASS --work_dir $results/TREE/ANN --upload_to_itol
+		pastml -t $tree -d all_strain_info.txt -c lineage sublineage DR_type --prediction_method DOWNPASS --work_dir $results/TREE/ANN --upload_to_itol
 		"""
 	} else {
 		error "Should not be there"

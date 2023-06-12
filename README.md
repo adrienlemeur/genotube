@@ -53,7 +53,7 @@ nextflow main.nf \\
 
 **GENE ORIENTED**
 * --target_region : bed file specifying specific regions to analyse
-> NOTE : Make sure bed file CHROM column must match reference annotation.
+> NOTE : Make sure bed file CHROM column matches reference annotation.
 
 **CONTAMINATION CHECK**
 * --contam_check ['taxo_class', 'compet_mapping', 'none'] : Method to use to process contamination. Read taxonomic classification with Kraken2, competitive mapping against reference genomes from common contaminants.

@@ -96,7 +96,6 @@ process indexVCF {
 	tuple val(sample), file("${sample}.normed.vcf.gz"), file("${sample}.normed.vcf.gz.csi")
 
 	when:
-	! params.target_region && \
 	(!mf.checkFile("$results/VCF/FILTERED", sample, "vcf.gz") && \
 	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") ) || mf.checkFORCE('CALL', params.FORCE)
 
@@ -231,6 +230,7 @@ workflow variant_calling {
 		fasta2Elfasta(index)
 		onePassBamProcess(BAM_RAW, fasta2Elfasta.out, index, results)
 
+		all_bam.view()
 		variantCallingGATK(all_bam, index, results)
  		variantCallingSamtools(all_bam, index, results)
 		variantCallingFreebayes(all_bam, index, results)

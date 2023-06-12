@@ -98,6 +98,7 @@ process resumeCoverage {
 	"""
 }
 
+
 process downSamplingAlignedRead {
 	tag "$sample"
 	label "samtools"
@@ -110,7 +111,9 @@ process downSamplingAlignedRead {
 	tuple val(sample), file("${sample}.subsample.fastq.gz")
 
 	when:
-	!mf.checkFile("$results/ALL_REPORTS/BAM/BRACKEN", sample, ".abundance.log")
+	(!mf.checkFile("$results/ALL_REPORTS/FASTQ/TAXOFILTER", sample, ".taxo.log") && \
+	!mf.checkFile("$results/ALL_REPORTS/BAM/BRACKEN", sample, ".abundance.log")) || \
+	!mf.checkFile("${results}/ALL_REPORTS/BAM/QUAL/", sample, "zip")
 
 	script:
 	"""
@@ -165,7 +168,7 @@ process taxoClass {
 
 	when:
 	( (params.prebuilt_K2_DB == '8G' || params.prebuilt_K2_DB == '16G') && \
-	!file("$data/Kraken2/${params.prebuilt_K2_DB}/inspect.txt").exists() ) || custom_K2_DB
+	!file("$data/Kraken2/${params.prebuilt_K2_DB}/inspect.txt").exists() ) || !custom_K2_DB
 
 	script:
 	if(params.custom_K2_DB){ DB = file(params.custom_K2_DB) }
@@ -189,6 +192,7 @@ process abundance {
 	tuple val(sample), file(kraken_log)
 	val krakenDB_path
 	val results
+
 
 	script:
 	"""
@@ -239,10 +243,11 @@ process statFastQC {
 	val(results)
 
 	output:
-	val true
+	val(true)
 
 	when:
-	false
+	1
+	//!mf.checkFile("${results}/ALL_REPORTS/BAM/QUAL/", sample, "zip")
 
 	script:
 	"""
@@ -342,7 +347,6 @@ workflow process_bam {
 
 		//end of quality check triggers coverage file concatenation / should be fixed
 		resumeCoverage(bamChecked.collect().ifEmpty(true), results)
-
 	emit:
 		all_processed_bam
 		coverage_info

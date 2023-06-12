@@ -1,4 +1,4 @@
-#!/usr/bin/env python 
+#!/usr/bin/env python3
 
 import sys
 vcf = sys.argv[sys.argv.index("-i")+1]
@@ -35,12 +35,12 @@ with open(vcf) as target:
 
 lineages = set([k.split(".")[0]  for  k in  sublineage_dict.keys()])
 
-print(vcf.split(".")[0], end = "\t")
+print(vcf.split(".")[0], end='\t')
 
 if(len(lineages) == 1):
-	print("clear", end = "\t")
+	print("clear", end='\t')
 else:
-	print("mixed", end = "\t")
+	print("mixed", end='\t')
 
 #SOMME DU NOMBRE DE MARQUEURS PAR LIGNEE
 lineage_dict = {}

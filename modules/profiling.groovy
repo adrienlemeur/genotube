@@ -16,9 +16,8 @@ process getAntibioRType {
 	val(true)
 
 	when:
-	!mf.checkFile("$results/AMR", sample, "_antibio_info.txt")
+	!mf.checkFile("$results/AMR", sample, "_antibio_info.txt") || mf.checkFORCE('ANN', params.FORCE)
 
-	//TODO : try catch / error gestion
 	script:
 	"""
 	zcat $vcf | grep -v FAIL | grep -v '#' > ${sample}.vcf
@@ -47,7 +46,8 @@ process getLineage {
 
 	when:
 	!mf.checkFile("$results/TAXO/LINEAGE_FULL_BARCODE", sample, "_full_lineage_report.txt") && \
-	params.taxonomy == 'barcode'
+	!mf.checkFile("$results/TAXO/LINEAGE_FULL_BARCODE", sample, "_full_lineage_report.txt") && \
+	params.taxonomy == 'barcode' || mf.checkFORCE('ANN', params.FORCE)
 
 	script:
 	"""
@@ -207,7 +207,7 @@ workflow profiling {
 			getLineage(annotated_vcf, file(params.lineageSNP), results)
 			getAntibioRType(annotated_vcf, antibioResistanceList, binExec_emit_signal, results)
 
-			resumeStrainInfo(annotated_vcf, getAntibioRType.out.collect().ifEmpty(true), getLineage.out.collect().ifEmpty(true), results)
+			resumeStrainInfo(annotated_vcf.collect(), getAntibioRType.out.collect().ifEmpty(true), getLineage.out.collect().ifEmpty(true), results)
 			strain_info = resumeStrainInfo.out.ifEmpty(true)
 		}
 
@@ -217,7 +217,7 @@ workflow profiling {
 			placement(vcf2fasta.out, file(params.referenceMSA), file(params.referenceTree), file(params.referenceModel), file(results))
 			taxoAssignement(placement.out, file(params.referenceTaxo))
 			resumeTaxo(taxoAssignement.out.collect(), results)
-			
+
 			fasta = vcf2fasta.out
 		}
 

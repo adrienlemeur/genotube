@@ -359,7 +359,7 @@ workflow process_fastq {
 		//if TRIM processes forced, do not import files from results folder that otherwise could cause collisions
 		if( !mf.checkFORCE('TRIM', params.FORCE) ){
 			Channel.fromPath(results+"/FASTQ/TRIMMED/*.{fastq,fastq}.gz", followLinks: false)
-				.map{it -> [it.simpleName.split("_1|_2")[0], it]}.groupTuple().branch{
+				.map{it -> [it.simpleName.split("_1|_2|_R1|_R2")[0], it]}.groupTuple().branch{
 					paired: it[1].size() == 2
 					single: it[1].size() == 1
 				}.set{ temp }
@@ -377,7 +377,7 @@ workflow process_fastq {
 		all_single_trimmed = temp.single.map(it -> [it[0], it[1]]).mix(singleNormFastq.out)
 
 		//by default, screen all fastq, can be disabled with --no_contam_check flag
-		competitiveMapping(all_paired_trimmed.map(it -> [it[0], it[1]]).mix(all_single_trimmed), file(params.indexed_genome_path), results)
+		competitiveMapping(paired_fastq.map(it -> [it[0], it[1]]).mix(all_single_trimmed), file(params.indexed_genome_path), results)
 
 		emit:
 			all_single_trimmed

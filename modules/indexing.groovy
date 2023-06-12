@@ -105,7 +105,8 @@ process binExecutionRights {
 
 	script:
 	"""
-	chmod +777 $binPath/*
+	touch test
+	#chmod +777 $binPath/*
 	"""
 }
 

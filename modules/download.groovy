@@ -94,13 +94,13 @@ workflow download {
 
 	if(params.fastq){
 		Channel.fromPath([params.fastq+"/*.{fq,fastq}.gz", results+"/FASTQ/RAW/*.{fq,fastq}.gz"], followLinks: true)
-				.map{it -> [it.simpleName.split("_1\$|_2\$")[0], it]}.groupTuple().branch{
+				.map{it -> [it.simpleName.split("_1\$|_2\$|_R1\$|_R2\$")[0], it]}.groupTuple().branch{
 			paired: it[1].size() == 2
 			single: it[1].size() == 1
 		}.set{ temp }
 	} else {
 		Channel.fromPath(results+"/FASTQ/RAW/*.{fq,fastq}.gz", followLinks: true)
-				.map{it -> [it.simpleName.split("_1.|_2.")[0], it]}.groupTuple().branch{
+				.map{it -> [it.simpleName.split("_1.|_2.|_R1.|_R2.")[0], it]}.groupTuple().branch{
 			paired: it[1].size() == 2
 			single: it[1].size() == 1
 		}.set{ temp }
