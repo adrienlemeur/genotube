@@ -2,50 +2,44 @@
 
 nextflow.enable.dsl=2
 
-process bwa_index {
+process bwa {
 	label 'bwa'
 
-	input:
-	file(referenceSequence)
-
 	output:
-	tuple val(referenceSequence.simpleName), file("${referenceSequence.simpleName}*")
-
-	when:
-	!params.help && !params.dry
+	tuple val(name), file("${name}*")
 
 	script:
+	name = params.referenceName
+	referenceSequence=file(params.referenceSequence)
 	"""
-	bwa-mem2 index $referenceSequence -p $referenceSequence.simpleName
+	bwa-mem2 index $referenceSequence -p ${name}
 	"""
 }
 
-process samtools_index {
+process samtools {
 	errorStrategy = "finish"
 	label = 'samtools'
 
-	input:
-	file(fasta)
-
 	output:
-	tuple file("${fasta.simpleName}.fa"), file("${fasta.simpleName}.fa.fai")
-
-	when:
-	!params.help && !params.dry
+	tuple file("${name}.fa"), file("${name}.fa.fai")
 
 	script:
+	name = params.referenceName
+	referenceSequence = file(params.referenceSequence)
+	referenceAnnotation = file(params.referenceAnnotation)
 	"""
-	{ 
-		zcat $fasta > ${fasta.simpleName}.fa
-	} || {
-		mv $fasta ${fasta.simpleName}.fa
-       }
-	samtools faidx ${fasta.simpleName}.fa
+	if (grep -q "gz" $referenceSequence ) ; then
+		gunzip -c ${referenceSequence} > ${name}.fa
+	else
+		ln -s $referenceSequence ${name}.fa
+	fi
+
+	samtools faidx ${name}.fa
 	"""
 }
 
 
-process picard_index {
+process picard {
 	errorStrategy = "finish"
 	label 'GATK'
 
@@ -61,52 +55,57 @@ process picard_index {
 	"""
 }
 
-process buildSnpeffDB {
+process snpEff {
 	label 'snpeff'
 	errorStrategy='finish'
 
-	input:
-	file(snpeffConfig_file)
-	file(referenceSequence)
-	file(referenceAnnotation)
-
 	output:
 	val(true)
 
 	when:
-	!params.help && !params.dry && !params.noGFF
+	!params.noGFF
 
 	script:
+	name = params.referenceName
+	referenceSequence = file(params.referenceSequence)
+	referenceAnnotation = file(params.referenceAnnotation)
+	snpeffConfig = file(params.snpeffConfig)
 	"""
-	path_to_config=\$(dirname \$(realpath snpEff.config))
+	mkdir -p ${projectDir}/data/snpeff/data/${name}
+	mkdir -p ${projectDir}/data/snpeff/data/genomes
 
-	mkdir -p \$path_to_config/data/${referenceSequence.simpleName}
-	mkdir -p \$path_to_config/data/genomes
+	if (grep -q "gz" $referenceSequence ) ; then
+		gunzip -c $referenceSequence > ${projectDir}/data/snpeff/data/genomes/${name}.fa
+	else
+		cp $referenceSequence ${projectDir}/data/snpeff/data/genomes/${name}.fa
+	fi
 
-	zcat $referenceSequence > \$path_to_config/data/genomes/${referenceSequence.simpleName}.fa
-	zcat $referenceAnnotation > \$path_to_config/data/${referenceSequence.simpleName}/genes.gff
+	if (grep -q "gz" $referenceAnnotation ) ; then
+		gunzip -c $referenceAnnotation > ${projectDir}/data/snpeff/data/${name}/genes.gff
+	else
+		cp $referenceSequence ${projectDir}/data/snpeff/data/${name}/genes.gff
+	fi
 
-	snpEff build -c $snpeffConfig_file -v ${referenceSequence.simpleName} -nodownload -d
+	chromosome=\$(grep ">" ${projectDir}/data/snpeff/data/genomes/${name}.fa | tr -d '>' | cut -f1 -d ' ')
+
+	cat $snpeffConfig > ${projectDir}/data/snpeff/config
+	echo -e "${name}.genome = Mycobacterium_tuberculosis" >> ${projectDir}/data/snpeff/config
+	echo -e "$name.\${chromosome}.codonTable = Mycobacterium" >> ${projectDir}/data/snpeff/config
+
+	snpEff build -c ${projectDir}/data/snpeff/config -v ${name} -nodownload -d
 	"""
 }
 
-process binExecutionRights {
+process setExecRights {
 	errorStrategy = "finish"
 	label 'script'
-
-	input:
-	file(binPath)
 
 	output:
 	val(true)
 
-	when:
-	!params.help
-
 	script:
 	"""
-	touch test
-	#chmod +777 $binPath/*
+	chmod +750 $baseDir/bin/*
 	"""
 }
 
@@ -114,18 +113,16 @@ process binExecutionRights {
 workflow index {
 
 	main:
-		snpeffConfig = file("data/snpeff/snpEff.config")
+		bwa()
+		samtools()
+		picard(samtools.out)
 
-		bwa_index(file(params.referenceSequence))
-		samtools_index(file(params.referenceSequence))
-		picard_index(samtools_index.out)
-
-		buildSnpeffDB(snpeffConfig, file(params.referenceSequence), file(params.referenceAnnotation))
-		binExecutionRights(file("bin"))
+		snpEff()
+		setExecRights()
 
 	emit:
-		bwa_index = bwa_index.out
-		samtools_picard_index = picard_index.out
-		snpeff_emit_signal = buildSnpeffDB.out
-		binExec_emit_signal = binExecutionRights.out
+		bwa = bwa.out
+		samtools_picard = picard.out
+		snpeff_emit_signal = snpEff.out
+		binExec_emit_signal = setExecRights.out
 }

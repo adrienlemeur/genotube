@@ -2,16 +2,14 @@
 
 nextflow.enable.dsl=2
 
-process variantAnnotation {
+process annotation {
 	tag "$sample"
 	label 'snpeff'
 
 	input:
 	tuple val(sample), file(vcf), file(csi)
 	tuple file(fasta), file(fai), file(dict)
-	file(snpeffConfig_file)
 	val(start)
-	val(resultsAnn)
 	val(results)
 
 	output:
@@ -23,7 +21,7 @@ process variantAnnotation {
 
 	script:
 	"""
-	snpEff ann -c $snpeffConfig_file ${fasta.simpleName} $vcf \
+	snpEff ann -c ${projectDir}/data/snpeff/config ${fasta.simpleName} $vcf \
 		-no-upstream -no-downstream -no-utr -no SPLICE_SITE_REGION \
 		-noStats -csvStats ${sample}_SNP_summary.txt > ${sample}.vcf
 
@@ -31,7 +29,7 @@ process variantAnnotation {
 	"""
 }
 
-process compressVCF {
+process compress {
 	tag "$sample"
 	label 'samtools'
 
@@ -69,7 +67,7 @@ process filterVariants {
 	script:
 	"""
 	bcftools filter $vcf \
-		-i "(AF[0]>0.95 || AF[1] > 0.95) && (FORMAT/AD[:0]>=5 || FORMAT/AD[:1]>=5) && QUAL>30" \
+		-i "MAX(INFO/AF)>0.95 && MAX(FORMAT/AD)>=5 && QUAL>30" \
 		--SnpGap 2 --IndelGap 9 --soft-filter FAIL --mode x \
 		-Oz -o ${sample}.filtered.vcf.gz
 
@@ -83,22 +81,26 @@ mf = new myFunctions()
 
 workflow process_vcf {
 	take: raw_vcf
-	take: coverage_info
 	take: index
 	take: snpeff_emit_signal
 
 	main:
-		snpeffConfig = file("data/snpeff/snpEff.config")
 		results = file(params.results)
 		file("$results/ALL_REPORTS/VCF/SNP_SUM").mkdirs()
 		file("$results/VCF/FILTERED").mkdirs()
 
-		variantAnnotation(raw_vcf, index, snpeffConfig, snpeff_emit_signal, results, results)
-		compressVCF(variantAnnotation.out, results)
+		if( mf.checkFORCE('ANN', params.FORCE) ){
+			old_vcf = Channel.empty()
+		} else {
+			old_vcf = Channel.fromPath(results+"/VCF/ANN/*.vcf.gz", followLinks: true).map{it -> [ it.simpleName, it ] }
+		}
 
-		filterVariants(compressVCF.out, index, results)
+		annotation(raw_vcf.mix(old_vcf), index, snpeff_emit_signal, results)
+		compress(annotation.out, results)
 
-		all_ann_vcf = compressVCF.out
+		filterVariants(compress.out, index, results)
+
+		all_ann_vcf = compress.out
 		end_signal = all_ann_vcf.ifEmpty(true)
 	emit:
 		all_ann_vcf

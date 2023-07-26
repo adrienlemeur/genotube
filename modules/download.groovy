@@ -89,58 +89,44 @@ workflow download {
 	//split the SRA list and channel it
 	SRA = Channel.from(file(params.sra)).splitText().map{it -> it.trim()}.filter( it -> it !=~ /^#/ ) //when nohelp nodry
 
-	foreign_fastq_single = Channel.empty()
-	foreign_fastq_paired = Channel.empty()
-
-	if(params.fastq){
-		Channel.fromPath([params.fastq+"/*.{fq,fastq}.gz", results+"/FASTQ/RAW/*.{fq,fastq}.gz"], followLinks: true)
-				.map{it -> [it.simpleName.split("_1\$|_2\$|_R1\$|_R2\$")[0], it]}.groupTuple().branch{
+	old_fastq = Channel.fromPath(params.input+"/*.{fq,fastq}.gz", followLinks: true)
+		.map{it -> [it.simpleName.split("_1\$|_2\$|_R1\$|_R2\$")[0], it]}.groupTuple()
+		.branch{
 			paired: it[1].size() == 2
 			single: it[1].size() == 1
-		}.set{ temp }
-	} else {
-		Channel.fromPath(results+"/FASTQ/RAW/*.{fq,fastq}.gz", followLinks: true)
-				.map{it -> [it.simpleName.split("_1.|_2.|_R1.|_R2.")[0], it]}.groupTuple().branch{
-			paired: it[1].size() == 2
-			single: it[1].size() == 1
-		}.set{ temp }
-	}
+		}
+	old_fastq.paired.mix(old_fastq.single).map{it -> it[1]}.flatten().subscribe{ it -> mf.createSymLink(it.toString(), results.toString()+"/FASTQ/RAW") }
 
-	foreign_fastq_single = temp.single.map{it -> [ it[0], it[1][0] ] }
-	foreign_fastq_paired = temp.paired.map{it -> [ it[0], it[1][0], it[1][1] ] }
-
-	foreign_fastq_single.map{ it -> it[1] }
-
-			.subscribe{ it -> mf.createSymLink(it.toString(), results.toString()+"/FASTQ/RAW") }
-	foreign_fastq_paired.map{ it -> [ it[1], it[2] ] }
-			.flatten().subscribe{ it -> mf.createSymLink(it.toString(), results.toString()+"/FASTQ/RAW") }
+	old_paired = old_fastq.paired.map{it -> [ it[0], it[1][0], it[1][1] ] }
+	old_single = old_fastq.single.map{it -> [ it[0], it[1][0] ] }
 
 	//query NCBI and download the fastq
-	queryNCBI(SRA, results, foreign_fastq_single.collect().ifEmpty(true), foreign_fastq_paired.collect().ifEmpty(true))
+	queryNCBI(SRA, results, old_paired.collect().ifEmpty(true), old_single.collect().ifEmpty(true))
 
 	queryNCBI.out.branch{
 		paired: it[1].size() == 2
 		single: it[1].size() == 0
-	}.set{ newly_download }
+	}.set{ new_fastq }
 
-	newly_download_single = newly_download.single.map{ it -> [ it[0], it[1] ] }
-	newly_download_paired = newly_download.paired.map{it -> [ it[0], it[1][0], it[1][1] ] }
-
-	//merge newly downloaded fastq channel with fastq alread stored in the fastq folder into a new flux (single end)
-	all_single_fastq = foreign_fastq_single.mix(newly_download_single)
-
-	//merge newly downloaded fastq channel with fastq alread stored in the fastq folder into a new flux (paired end)
-	all_paired_fastq = foreign_fastq_paired.mix(newly_download_paired)
+	new_single = new_fastq.single.map{ it -> [ it[0], it[1] ] }
+	new_paired = new_fastq.paired.map{ it -> [ it[0], it[1][0], it[1][1] ] }
 
 	//generate artificial fastq from fasta file
-	if(params.fasta) {
-		compressed = Channel.fromPath(params.fasta+"/*.{fna,fa,fasta}*gz", followLinks: true).map{it -> [ it.simpleName, true, it]}
-		raw = Channel.fromPath(params.fasta+"/*.{fna,fa,fasta}", followLinks: true).map{it -> [ it.simpleName, false, it]}
-		fasta2NGS(compressed.mix(raw))
-		all_paired_fastq = all_paired_fastq.mix(fasta2NGS.out)
-	}
+	fasta = Channel.fromPath(params.input+"/*.{fna,fa,fasta}.gz", followLinks: true).map{it -> [ it.simpleName, true, it]}
+			.mix(Channel.fromPath(params.input+"/*.{fna,fa,fasta}", followLinks: true).map{it -> [ it.simpleName, false, it]})
 
+	fasta2NGS(fasta)
+	fasta2NGS.out.map{it -> [ it[1], it[2] ] }.flatten().subscribe{ it -> mf.createSymLink(it.toString(), results.toString()+"/FASTQ/RAW") }
+
+	old_single.mix(old_paired, new_single, new_paired, fasta2NGS.out).collect({"All files have been imported / downloaded"}).filter( ~/false/ )
+		.mix(Channel.fromPath(results+"/FASTQ/RAW/*.{fq,fastq}.gz", followLinks: true))
+			.map{it -> [it.simpleName.split("_1\$|_2\$|_R1\$|_R2\$")[0], it]}.groupTuple()
+			.branch{
+				paired: it[1].size() == 2
+				single: it[1].size() == 1
+			}.set{ fastq }
+	
 	emit:
-	all_single_fastq
-	all_paired_fastq
+	all_single_fastq = fastq.single.map{it -> [ it[0], it[1][0] ] }
+	all_paired_fastq = fastq.paired.map{it -> [ it[0], it[1][0], it[1][1] ] }
 }

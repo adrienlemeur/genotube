@@ -23,7 +23,7 @@ process spliceReference {
 	#get genome file for bedtools slop
 	cut -f1,2 $fai > ${reference}.genome
 
-	#add 200 nuc before and after every site for read filtering
+	#add 300 nuc before and after every site for read filtering
 	bedtools slop -i $region -b 300 -g ${reference}.genome > sloppy_bed.bed
 
 	#copy reference header for new reference
@@ -49,7 +49,7 @@ process single_readCleaning {
 
 	when:
 	params.target_region && !params.dry && !params.help && (!mf.checkFile("$results/FASTQ/TRIMMED", sample, "q.gz") && \
-	!mf.checkFile("$results/BAM/RAW", sample, "bam") && \
+	!mf.checkFile("$results/BAM", sample, "bam") && \
 	!mf.checkFile("$results/BAM/FILTERED", sample, "bam") && \
 	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") && \
 	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") ) || mf.checkFORCE('TRIM', params.FORCE)
@@ -59,7 +59,7 @@ process single_readCleaning {
 	#kmer based filter
 	bbduk.sh in=$f1 outm=f1.fastq.gz ref=$referenceSequence k=31 stats=${sample}_bbstats.txt -Xmx5g
 
-	#filtering maybe unpair reads
+	#filtering maybunpair reads
 	#repair faulty files
 	repair.sh in=f1.fastq.gz out=${sample}_${region_name}.filtered.fastq.gz
 	rm f1.fastq.gz
@@ -84,7 +84,7 @@ process paired_readCleaning {
 
 	when:
 	params.target_region && !params.dry && !params.help && (!mf.checkFile("$results/FASTQ/TRIMMED", sample, "q.gz") && \
-	!mf.checkFile("$results/BAM/RAW", sample, "bam") && \
+	!mf.checkFile("$results/BAM", sample, "bam") && \
 	!mf.checkFile("$results/BAM/FILTERED", sample, "bam") && \
 	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") && \
 	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") ) || mf.checkFORCE('TRIM', params.FORCE)
@@ -104,65 +104,9 @@ process paired_readCleaning {
 	"""
 }
 
-process single_trimming {
-	//Remove adaptaters, merge reads that can be merged
-	tag "$sample"
-	label 'fastp'
-
-	input:
-	tuple val(sample), file(f1)
-	val(results)
-
-	output:
-	tuple val(sample), file("${sample}.trimmed.fastq.gz")
-
-	when:
-	!params.dry && !params.help && (!mf.checkFile("$results/FASTQ/TRIMMED", sample, "q.gz") && \
-	!mf.checkFile("$results/BAM/RAW", sample, "bam") && \
-	!mf.checkFile("$results/BAM/FILTERED", sample, "bam") && \
-	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") && \
-	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") ) || mf.checkFORCE('TRIM', params.FORCE)
-
-	script:
-	"""
-	fastp -i $f1 -o ${sample}.trimmed.fastq.gz \\
-			-q 25 -l 20 -e 20 --dont_eval_duplication \\
-			--thread ${task.cpus} \\
-			--json /dev/null --html /dev/null > $results/ALL_REPORTS/FASTQ/TRIMMING/${sample}_SE.fastp.log
-	"""
-}
-
-process paired_trimming {
-	//Remove adaptaters, merge reads that can be merged
-	tag "$sample"
-	label 'fastp'
-
-	input:
-	tuple val(sample), file(f1), file(f2)
-	val(results)
-
-	output:
-	tuple val(sample), file("${sample}_1.trimmed.fastq.gz"), file("${sample}_2.trimmed.fastq.gz")
-
-	when:
-	!params.dry && !params.help && (!mf.checkFile("$results/FASTQ/TRIMMED", sample, "q.gz") && \
-	!mf.checkFile("$results/BAM/RAW", sample, "bam") && \
-	!mf.checkFile("$results/BAM/FILTERED", sample, "bam") && \
-	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") && \
-	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") ) || mf.checkFORCE('TRIM', params.FORCE)
-
-	script:
-	"""
-	fastp -i $f1 -I $f2 --out1 ${sample}_1.trimmed.fastq.gz --out2 ${sample}_2.trimmed.fastq.gz \\
-			-q 25 -l 20 -e 20 --dont_eval_duplication \\
-			--thread ${task.cpus} \\
-			--json /dev/null --html /dev/null > $results/ALL_REPORTS/FASTQ/TRIMMING/${sample}_PE.fastp.log
-	"""
-}
-
 process taxoFilterPaired {
 	tag "$sample"
-	label 'kraken2'
+	label 'kraken2_filtering'
 
 	input:
 	tuple val(sample), file(f1), file(f2)
@@ -174,10 +118,10 @@ process taxoFilterPaired {
 
 	when:
 	!params.dry && !params.help && (!mf.checkFile("$results/FASTQ/TRIMMED", sample, "q.gz") && \
-	!mf.checkFile("$results/BAM/RAW", sample, "bam") && \
+	!mf.checkFile("$results/BAM", sample, "bam") && \
 	!mf.checkFile("$results/BAM/FILTERED", sample, "bam") && \
 	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") && \
-	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") ) || mf.checkFORCE('TRIM', params.FORCE)
+	!mf.checkFile("$results/VCF/FILTERED", sample, "vcf.gz") ) || mf.checkFORCE('TRIM', params.FORCE)
 
 	script:
 	"""
@@ -196,7 +140,7 @@ process taxoFilterPaired {
 
 process taxoFilterSingle {
 	tag "$sample"
-	label 'kraken2'
+	label 'kraken2_filtering'
 
 	input:
 	tuple val(sample), file(f1)
@@ -208,7 +152,7 @@ process taxoFilterSingle {
 
 	when:
 	!params.dry && !params.help && (!mf.checkFile("$results/FASTQ/TRIMMED", sample, "q.gz") && \
-	!mf.checkFile("$results/BAM/RAW", sample, "bam") && \
+	!mf.checkFile("$results/BAM", sample, "bam") && \
 	!mf.checkFile("$results/BAM/FILTERED", sample, "bam") && \
 	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") && \
 	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") ) || mf.checkFORCE('TRIM', params.FORCE)
@@ -225,6 +169,75 @@ process taxoFilterSingle {
 	"""
 }
 
+process single_trimming {
+	tag "$sample"
+	label 'fastp'
+
+	input:
+	tuple val(sample), file(f1)
+	val(results)
+
+	output:
+	tuple val(sample), file("${sample}.filtered.fastq.gz")
+
+	when:
+	!params.dry && !params.help && (!mf.checkFile("$results/FASTQ/TRIMMED", sample, "q.gz") && \
+	!mf.checkFile("$results/BAM", sample, "bam") && \
+	!mf.checkFile("$results/BAM/FILTERED", sample, "bam") && \
+	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") && \
+	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") ) || mf.checkFORCE('TRIM', params.FORCE)
+
+	script:
+	"""
+	fastp -i $f1 -o ${sample}.filtered.fastq.gz \\
+			-q 25 -l 20 -e 20 --dont_eval_duplication \\
+			--thread ${task.cpus} \\
+			--json /dev/null --html /dev/null > $results/ALL_REPORTS/FASTQ/TRIMMING/${sample}_SE.fastp.log
+
+	rm -rf $results/FASTQ/TRIMMED/${sample}*.fastq.gz
+
+	mv ${sample}.filtered.fastq.gz $results/FASTQ/TRIMMED/${sample}.filtered.fastq.gz
+	ln -s $results/FASTQ/TRIMMED/${sample}.filtered.fastq.gz ${sample}.filtered.fastq.gz
+
+	"""
+}
+
+process paired_trimming {
+	tag "$sample"
+	label 'fastp'
+
+	input:
+	tuple val(sample), file(f1), file(f2)
+	val(results)
+
+	output:
+	tuple val(sample), file("${sample}_1.filtered.fastq.gz"), file("${sample}_2.filtered.fastq.gz")
+
+	when:
+	!params.dry && !params.help && (!mf.checkFile("$results/FASTQ/TRIMMED", sample, "q.gz") && \
+	!mf.checkFile("$results/BAM", sample, "bam") && \
+	!mf.checkFile("$results/BAM/FILTERED", sample, "bam") && \
+	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") && \
+	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") ) || mf.checkFORCE('TRIM', params.FORCE)
+
+	script:
+	"""
+	fastp -i $f1 -I $f2 --out1 ${sample}_1.filtered.fastq.gz --out2 ${sample}_2.filtered.fastq.gz \\
+			-q 25 -l 20 -e 20 --dont_eval_duplication \\
+			--thread ${task.cpus} \\
+			--json /dev/null --html /dev/null > $results/ALL_REPORTS/FASTQ/TRIMMING/${sample}_PE.fastp.log
+
+	rm -rf $results/FASTQ/TRIMMED/${sample}_1*.fastq.gz $results/FASTQ/TRIMMED/${sample}_2*.fastq.gz
+
+	mv ${sample}_1.filtered.fastq.gz $results/FASTQ/TRIMMED/${sample}_1.filtered.fastq.gz
+	ln -s $results/FASTQ/TRIMMED/${sample}_1.filtered.fastq.gz ${sample}_1.filtered.fastq.gz
+
+	mv ${sample}_2.filtered.fastq.gz $results/FASTQ/TRIMMED/${sample}_2.filtered.fastq.gz
+	ln -s $results/FASTQ/TRIMMED/${sample}_2.filtered.fastq.gz ${sample}_2.filtered.fastq.gz
+	"""
+}
+
+/*
 process pairedNormFastq {
 	tag "$sample"
 	label 'bbnorm'
@@ -251,11 +264,10 @@ process pairedNormFastq {
 	else
 	"""
 	#not the cleanest way but simple
-	ln -s $f1 ${sample}_1.filtered.fastq.gz
-	ln -s $f1 $results/FASTQ/TRIMMED/${sample}_1.filtered.fastq.gz
+	rm -rf $results/FASTQ/TRIMMED/${sample}_1.filtered.fastq.gz $results/FASTQ/TRIMMED/${sample}_2.filtered.fastq.gz
 
-	ln -s $f2 ${sample}_2.filtered.fastq.gz
-	ln -s $f2 $results/FASTQ/TRIMMED/${sample}_2.filtered.fastq.gz
+	mv $f1 $results/FASTQ/TRIMMED/${sample}_1.filtered.fastq.gz ; ln -s $results/FASTQ/TRIMMED/${sample}_1.filtered.fastq.gz ${sample}_1.filtered.fastq.gz
+	mv $f2 $results/FASTQ/TRIMMED/${sample}_2.filtered.fastq.gz ; ln -s $results/FASTQ/TRIMMED/${sample}_2.filtered.fastq.gz ${sample}_2.filtered.fastq.gz
 	"""
 }
 
@@ -286,10 +298,11 @@ process singleNormFastq {
 	ln -s $f1 ${sample}.filtered.fastq.gz
 
 	rm -rf $results/FASTQ/TRIMMED/${sample}*.fastq.gz
-	mv ${sample}.filtered.fastq.gz $results/FASTQ/TRIMMED/${sample}.filtered.fastq.gz
+	mv $f1 $results/FASTQ/TRIMMED/${sample}.filtered.fastq.gz
 	ln -s $results/FASTQ/TRIMMED/${sample}.filtered.fastq.gz ${sample}.filtered.fastq.gz
 	"""
 }
+*/
 
 process competitiveMapping {
 	//screen fastq by competitive mapping of a subset of reads
@@ -327,10 +340,7 @@ workflow process_fastq {
 		results = file(params.results)
 		data = file(params.data)
  
-		file("$data/Kraken2/Kraken16Gb").mkdirs()
-
-		file("$results/FASTQ/TRIMMED").mkdirs()
-		file("$results/FASTQ/TRIMMED").mkdirs()
+		file("$results/FASTQ/TRIMMED").mkdirs() ; file("$results/FASTQ/TRIMMED").mkdirs()
 
 		file("$results/ALL_REPORTS/FASTQ/KMERFILTER").mkdirs()
 		file("$results/ALL_REPORTS/FASTQ/TRIMMING").mkdirs()
@@ -364,17 +374,21 @@ workflow process_fastq {
 					single: it[1].size() == 1
 				}.set{ temp }
 		} else if (mf.checkFORCE('TRIM', params.FORCE)) {
-			temp = Channel.empty()
+			Channel.empty().branch{
+				paired: it[1].size() == 2
+				single: it[1].size() == 1
+			}.set{ temp }
 		}
 
-		pairedNormFastq(paired_trimming.out, results)
-		singleNormFastq(single_trimming.out, results)
+		//maybe i will put it back someday
+		//pairedNormFastq(paired_trimming.out, results)
+		//singleNormFastq(single_trimming.out, results)
 
 		//merge newly trimmed fastq channel with fastq alread stored in the fastq folder into a new flux  (paired)
-		all_paired_trimmed = temp.paired.map(it -> [it[0], it[1][0], it[1][1]]).mix(pairedNormFastq.out)
+		all_paired_trimmed = temp.paired.map(it -> [it[0], it[1][0], it[1][1]]).mix(paired_trimming.out)
 
 		//merge newly trimmed fastq channel with fastq alread stored in the fastq folder into a new flux (single end)
-		all_single_trimmed = temp.single.map(it -> [it[0], it[1]]).mix(singleNormFastq.out)
+		all_single_trimmed = temp.single.map(it -> [it[0], it[1]]).mix(single_trimming.out)
 
 		//by default, screen all fastq, can be disabled with --no_contam_check flag
 		competitiveMapping(paired_fastq.map(it -> [it[0], it[1]]).mix(all_single_trimmed), file(params.indexed_genome_path), results)

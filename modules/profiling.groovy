@@ -2,95 +2,24 @@
 
 nextflow.enable.dsl=2
 
-process getAntibioRType {
-	tag "$sample"
-	label 'R'
+process profile {
 
 	input:
-	tuple val(sample), file(vcf)
-	file(antibioResistanceList)
-	val(start)
+	file(vcf)
 	val(results)
 
 	output:
-	val(true)
+	file("all_strains_info.txt")
 
-	when:
-	!mf.checkFile("$results/AMR", sample, "_antibio_info.txt") || mf.checkFORCE('ANN', params.FORCE)
-
-	script:
-	"""
-	zcat $vcf | grep -v FAIL | grep -v '#' > ${sample}.vcf
-	isStrainResistant.sh ${sample}.vcf $antibioResistanceList > ${sample}
-
-	getDT.R ${sample}
-	mv ${sample}.refined.txt ${sample}_antibio_info.txt
-	cp ${sample}_antibio_info.txt $results/AMR
-
-	rm -rf ${sample}.vcf ${sample}
-	"""
-}
-
-
-process getLineage {
-	tag "$sample"
-	label 'python'
-
-	input:
-	tuple val(sample), file(vcf)
-	file(lineageSNP)
-	val(results)
-
-	output:
-	val true
-
-	when:
-	!mf.checkFile("$results/TAXO/LINEAGE_FULL_BARCODE", sample, "_full_lineage_report.txt") && \
-	!mf.checkFile("$results/TAXO/LINEAGE_FULL_BARCODE", sample, "_full_lineage_report.txt") && \
-	params.taxonomy == 'barcode' || mf.checkFORCE('ANN', params.FORCE)
-
-	script:
-	"""
-	{
-		cut -f3 $lineageSNP > pos
-		zcat $vcf | grep -v FAIL | grep -Fwf pos | cut -f1-5 > ${sample}.tmp
-		cut -f2 ${sample}.tmp > backPos
-		grep -Fwf backPos $lineageSNP > refLineage.bed
-
-		getLineage.py -i ${sample}.tmp -R refLineage.bed > $results/TAXO/SNP_LINEAGE/${sample}_lineage_info.txt
-		mv *_full_lineage_report.txt $results/TAXO/LINEAGE_FULL_BARCODE/${sample}_full_lineage_report.txt
-	} || {
-		touch probably_not_tuberculosis
-	}
-	"""
-}
-
-process resumeStrainInfo {
-	label 'script'
-
-	input:
-	tuple val(sample), file(vcf)
-	file(antibioProfile)
-	file(lineageProfile)
-	val(results)
-
-	output:
-	tuple val(sample), file(vcf), file("all_strain_info.txt")
-	
 	when:
 	params.taxonomy == 'barcode'
 
 	script:
+	lineageSNP = file(params.lineageSNP)
+	antibioSNP = file(params.antibioSNP)
 	"""
-	echo -ne "sample\tsignal\tlineage\tsublineage\tDR_type\t" > all_strain_info.txt
-	echo -ne "amikacin\taminoglycosides\tbedaquiline\tcapreomycin\tciprofloxacin\tclofazimine\t" >> all_strain_info.txt
-	echo -ne "cycloserine\tdelamanid\tethambutol\tethionamide\t" >> all_strain_info.txt
-	echo -ne "fluoroquinolones\tisoniazid\tkanamycin\tlevofloxacin\tlinezolid\t" >> all_strain_info.txt
-	echo -ne "moxifloxacin\tofloxacin\tpara-aminosalicylic_acid" >> all_strain_info.txt
-	echo -ne "\tpyrazinamide\trifampicin\tstreptomycin\n" >> all_strain_info.txt
-
-	join <(sort -k1 $results/TAXO/SNP_LINEAGE/*) <(sort -k1 $results/AMR/*) -e 'NA' -t \$'\t' | sort -k4 >> all_strain_info.txt
-	cp all_strain_info.txt $results/all_strain_info.txt
+	TB-detective -i *.vcf.gz -lin $lineageSNP -ab $antibioSNP 2> /dev/null > all_strains_info.txt
+	cp all_strains_info.txt $results/all_strains_info.txt
 	"""
 }
 
@@ -184,7 +113,6 @@ mf = new myFunctions()
 
 workflow profiling {
 	take: annotated_vcf
-	take: raw_vcf
 	take: binExec_emit_signal
 	take: index
 
@@ -202,13 +130,8 @@ workflow profiling {
 		if(params.species == 'MTBC') {
 			println "Samples are assumed to belong to the M. tuberculosis Complex !"
 
-			antibioResistanceList = file("data/antibioResistance.txt")
-
-			getLineage(annotated_vcf, file(params.lineageSNP), results)
-			getAntibioRType(annotated_vcf, antibioResistanceList, binExec_emit_signal, results)
-
-			resumeStrainInfo(annotated_vcf.collect(), getAntibioRType.out.collect().ifEmpty(true), getLineage.out.collect().ifEmpty(true), results)
-			strain_info = resumeStrainInfo.out.ifEmpty(true)
+			profile(annotated_vcf.map{it -> it[1]}.collect(), results)
+			strain_info = profile.out.ifEmpty(true)
 		}
 
 		fasta = Channel.empty()

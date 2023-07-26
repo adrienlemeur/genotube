@@ -2,7 +2,7 @@
 
 nextflow.enable.dsl=2
 
-process variantCallingGATK {
+process GATK {
 	tag "$sample"
 	label 'GATK'
 
@@ -31,7 +31,7 @@ process variantCallingGATK {
 	"""
 }
 
-process variantCallingSamtools {
+process mpileup {
 	tag "$sample"
 	label 'bcftools'
 
@@ -55,7 +55,7 @@ process variantCallingSamtools {
 	"""
 }
 
-process variantCallingFreebayes {
+process freebayes {
 	tag "$sample"
 	label 'freebayes'
 
@@ -65,7 +65,7 @@ process variantCallingFreebayes {
 	val(results)
 
 	output:
-	tuple val(sample), file("${sample}_freebayes.vcf.gz")
+	tuple val(sample), file("${sample}.vcf.gz")
 
 	when:
 	params.variant_caller == 'freebayes' && !params.target_region && \
@@ -80,6 +80,9 @@ process variantCallingFreebayes {
 		--use-reference-allele
 
 	bgzip ${sample}_freebayes.vcf
+
+	rm -rf $results/VCF/RAW/${sample}.vcf.gz
+	mv ${sample}_freebayes.vcf.gz $results/VCF/RAW/${sample}.vcf.gz ; ln -s $results/VCF/RAW/${sample}.vcf.gz
 	"""
 }
 
@@ -96,8 +99,7 @@ process indexVCF {
 	tuple val(sample), file("${sample}.normed.vcf.gz"), file("${sample}.normed.vcf.gz.csi")
 
 	when:
-	(!mf.checkFile("$results/VCF/FILTERED", sample, "vcf.gz") && \
-	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") ) || mf.checkFORCE('CALL', params.FORCE)
+	!mf.checkFile("$results/VCF/FILTERED", sample, "vcf.gz") || mf.checkFORCE('CALL', params.FORCE)
 
 	script:
 	"""
@@ -223,28 +225,30 @@ workflow variant_calling {
 	take: index
 
 	main:
+		all_bam.view()
+
 		results = file(params.results)
 		file("$results/VCF/RAW").mkdirs()
-		file("$results/ALL_REPORTS/BAM/DEDUP").mkdirs()
 
 		fasta2Elfasta(index)
 		onePassBamProcess(BAM_RAW, fasta2Elfasta.out, index, results)
 
-		all_bam.view()
-		variantCallingGATK(all_bam, index, results)
- 		variantCallingSamtools(all_bam, index, results)
-		variantCallingFreebayes(all_bam, index, results)
+		GATK(all_bam, index, results)
+		mpileup(all_bam, index, results)
+		freebayes(all_bam, index, results)
 
 		if( mf.checkFORCE('CALL', params.FORCE) ){
 			old_vcf = Channel.empty()
-		} else if(params.vcf == false){
-			old_vcf = Channel.fromPath(results+"/VCF/RAW/*.vcf.gz").map{it -> [it.simpleName, it]}
 		} else {
-			old_vcf = Channel.fromPath([results+"/VCF/RAW/*.vcf.gz", params.vcf+"/*.vcf.gz"]).map{it -> [it.simpleName, it]}
-			old_vcf.map{it -> it[1]}.flatten()
-				.subscribe{ it -> mf.createSymLink(it.toString(), results.toString()+"/VCF/RAW") }
+			old_vcf = Channel.fromPath(params.input+"/*.{vcf.gz,bcf}", followLinks: true)
+				.map{it -> [ it.simpleName, it]}
+			old_vcf.subscribe{ it -> mf.createSymLink(it[1].toString(), results.toString()+"/BAM") }
+
+			old_vcf = Channel.fromPath(results+"/VCF/RAW/*.vcf.gz", followLinks: true)
+				.map{it -> [ it.simpleName, it ] }
 		}
-		indexVCF(old_vcf.mix(variantCallingGATK.out).mix(variantCallingSamtools.out).mix(variantCallingFreebayes.out), index, results)
+
+		indexVCF(old_vcf.mix(freebayes.out, GATK.out, mpileup.out), index, results)
 
 		all_vcf = indexVCF.out.mix(onePassBamProcess.out)
 

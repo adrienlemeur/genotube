@@ -9,14 +9,10 @@ class myFunctions {
 		return(answer)
 	}
 
-	public static void createSymLink(String source, String destination){
+	public static boolean createSymLink(String source, String destination){
 		def baseName = source.replaceFirst(~/\.[^\.]+$/, '')
-		def query = "[ ! -f $destination ] && echo true"
-
-		if( query.execute() ){
-			"ln -s $source $destination".execute()
-		}
-
+		"ln -s $source $destination".execute()
+		return(1)
 	}
 
 	public static boolean checkFORCE(String selected_param, String OPTION) {

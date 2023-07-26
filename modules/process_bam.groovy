@@ -17,8 +17,7 @@ process qualityCheck {
 	val true, emit: signal
 
 	when:
-	(!mf.checkFile("$results/BAM/FILTERED", sample, "bam") && \
-	!mf.checkFile("$results/VCF/FILTERED", sample, "vcf.gz") && \
+	(!mf.checkFile("$results/VCF/FILTERED", sample, "vcf.gz") && \
 	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") ) || mf.checkFORCE('MAP', params.FORCE)
 
 	script:
@@ -202,38 +201,6 @@ process abundance {
 	"""
 }
 
-process deduplication {
-	tag "$sample"
-	label 'GATK_SPARK'
-
-	input:
-	tuple val(sample), file(bam)
-	tuple file(fasta), file(fai), file(dict)
-	val(results)
-
-	output:
-	tuple val(sample), file("${sample}.dedup.bam"), file("*.bai")
-
-	when:
-	((! mf.checkFile("$results/BAM/FILTERED", sample, "bam") && \
-	! mf.checkFile("$results/VCF/FILTERED", sample, "vcf.gz") && \
-	! mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") ) || mf.checkFORCE('CALL', params.FORCE) ) && !params.target_region
-
-	script:
-	"""
-	gatk MarkDuplicatesSpark \\
-		-I $bam --create-output-bam-index \\
-		-M $results/ALL_REPORTS/BAM/DEDUP/${sample}_dedup_metrics.txt \\
-		-O ${sample}.dedup.bam \\
-		--remove-all-duplicates
-
-	rm -rf $results/BAM/FILTERED/${sample}.dedup.bam
-
-	mv ${sample}.dedup.bam $results/BAM/FILTERED/${sample}.dedup.bam
-	ln -s $results/BAM/FILTERED/${sample}.dedup.bam ${sample}.dedup.bam
-	"""
-}
-
 process statFastQC {
 	tag "$sample"
 	label 'fastqc'
@@ -246,8 +213,7 @@ process statFastQC {
 	val(true)
 
 	when:
-	1
-	//!mf.checkFile("${results}/ALL_REPORTS/BAM/QUAL/", sample, "zip")
+	!mf.checkFile("${results}/ALL_REPORTS/BAM/QUAL/", sample, "zip")
 
 	script:
 	"""
@@ -265,7 +231,7 @@ process indexBam {
 	output:
 	tuple val(sample), file(bam), file("*.bai")
 
-	when:
+	when:extQualityCheck
 	((! mf.checkFile("$results/BAM/FILTERED", sample, "bam") && \
 	! mf.checkFile("$results/VCF/FILTERED", sample, "vcf.gz") && \
 	! mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") ) || mf.checkFORCE('CALL', params.FORCE) )
@@ -286,51 +252,20 @@ workflow process_bam {
 		results = file(params.results)
 		data = file(params.data)
 
-		file("$results/ALL_REPORTS/BAM").mkdirs()
-		file("$results/ALL_REPORTS/BAM/DEDUP").mkdirs()
 		file("$results/ALL_REPORTS/BAM/QUAL").mkdirs()
-
-		file("$results/BAM/RAW").mkdirs()
-		file("$results/BAM/FILTERED").mkdirs()
-
-		file("$results/VCF/RAW").mkdirs()
-   		file("$results/DELETION_REGION").mkdirs()
+		file("$results/BAM").mkdirs()
 
 		//Quality check
 		if(! mf.checkFORCE('COVERAGE_CHECK', params.SKIP) ) {
 			qualityCheck(all_bam, index, results)
-			//Discard sample with sequencing depth <= 10 && coverage >= 80%
 			qualityCheck.out.file.filter{it[1].toInteger() >= 10 && it[2].toInteger() >= 80}.map{it -> [ it[0], it[3] ] }.set{good_bam}
 		} else {
 			//no quality check, pass all bam downstream
 			all_bam.set{ good_bam }
 		}
 
-//		deduplication(good_bam, index, results)
-
-		//deduplication is slow, add already processed bam
-		if( ! mf.checkFORCE('MAP', params.FORCE) ) {
-			old_processed_bam = Channel.fromPath(results+"/BAM/FILTERED/*.bam").map{it -> [it.simpleName, it]}
-		} else {
-			old_processed_bam = Channel.empty()
-		}
-
-		if(! mf.checkFORCE('COVERAGE_CHECK', params.SKIP) ) {	//checkForce name is confusing, should either be checkSKIP or a generic function for both since params.[FORCE/SKIP] is specified
-			extQualityCheck(old_processed_bam, index, results)
-			extQualityCheck.out.file.filter{it[1].toInteger() >= 10 && it[2].toInteger() >= 80}.map{it -> [ it[0], it[3] ] }.set{ good_old_bam }
-
-			coverage_info = qualityCheck.out.covinfo.mix(extQualityCheck.out.covinfo)
-			bamChecked = extQualityCheck.out.signal.collect().ifEmpty(true).mix(qualityCheck.out.signal.ifEmpty(true)).collect()
-		} else {
-			old_processed_bam.set{ good_old_bam }
-
-			//when quality check is disabled, set samples coverage & depth to null
-			coverage_info = good_old_bam.mix(good_bam).map{it -> [it[0]]}.flatten().unique().map{it -> [ it, null, null ]}
-			bamChecked = coverage_info.collect().ifEmpty(true)
-		}
-
 		//index extern files
-		indexBam(good_bam.mix(good_old_bam))
+		indexBam(good_bam)
 
 		//add them to the flow
 		all_processed_bam = indexBam.out
@@ -340,14 +275,16 @@ workflow process_bam {
 
 		downloadKrakenDB(data)
 
+		//coverage_info = good_bam.map{it -> [it[0]]}.flatten().unique().map{it -> [ it, null, null ]}
+
 		downSamplingAlignedRead(all_bam, results)
 		statFastQC(downSamplingAlignedRead.out, results)
 		taxoClass(downloadKrakenDB.out.ifEmpty(true), downSamplingAlignedRead.out, data)
 		abundance(taxoClass.out, file(data+"/Kraken2/$params.prebuilt_K2_DB"), results+"/ALL_REPORTS/BAM/BRACKEN")
 
 		//end of quality check triggers coverage file concatenation / should be fixed
-		resumeCoverage(bamChecked.collect().ifEmpty(true), results)
+		coverage_info = resumeCoverage(all_processed_bam.collect().ifEmpty(true), results)
 	emit:
 		all_processed_bam
-		coverage_info
+		//coverage_info
 }
