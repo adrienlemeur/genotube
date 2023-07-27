@@ -1,0 +1,25 @@
+config/snpEff.config
+
+# Mycobacterium tuberculosis Ancestral Genome
+H37Rv.genome : Mycobacterium_tuberculosis
+MTBC_ancestor.genome : Mycobacterium_tuberculosis
+ASM2073130v1.genome : Mycobacterium_tuberculosis
+GCF_020731305.genome : Mycobacterium_tuberculosis
+mycobrowser_leprae.genome : Mycobacterium_leprae
+
+#Standard codon table with GTG as start codon
+codon.Mycobacterium: TTT/F, TTC/F, TTA/L, TTG/L+, TCT/S, TCC/S, TCA/S, TCG/S, TAT/Y, TAC/Y, TAA/*, TAG/*, TGT/C, TGC/C, TGA/*, TGG/W, CTT/L, CTC/L, CTA/L, CTG/L+, CCT/P, CCC/P, CCA/P, CCG/P, CAT/H, CAC/H, CAA/Q, CAG/Q, CGT/R, CGC/R, CGA/R, CGG/R, ATT/I, ATC/I, ATA/I, ATG/M+, ACT/T, ACC/T, ACA/T, ACG/T, AAT/N, AAC/N, AAA/K, AAG/K, AGT/S, AGC/S, AGA/R, AGG/R, GTT/V, GTC/V, GTA/V, GTG/V+, GCT/A, GCC/A, GCA/A, GCG/A, GAT/D, GAC/D, GAA/E, GAG/E, GGT/G, GGC/G, GGA/G, GGG/G
+
+#Leprae Genomes
+mycobrowser_leprae.AL450380.2.codonTable : Mycobacterium
+
+#Abscessus Genomes
+ASM2073130v1.NZ_JAJFOF010000001.1.codonTable : Mycobacterium
+ASM2073130v1.NZ_JAJFOF010000002.1.codonTable : Mycobacterium
+GCF_020731305.codonTable: Mycobacterium
+GCF_020731305.codonTable: Mycobacterium
+
+H37Rv.NC_000962.3.codonTable : Mycobacterium
+MTBC_ancestor.NC_000962.3.codonTable : Mycobacterium
+mycobacterium_tuberculosis_ancestor.genome = Mycobacterium_tuberculosis
+mycobacterium_tuberculosis_ancestor.NC_000962.3.codonTable = Mycobacterium
