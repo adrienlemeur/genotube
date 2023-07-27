@@ -1,0 +1,20 @@
+title: "Genotube Report"
+subtitle: "Short read NGS analysis summary"
+
+report_header_info:
+ - Contact E-mail: "alemeur@biophylo.com"
+
+skip_generalstats: true
+
+module_order:
+ - fastqc
+ - kraken:
+	"*.abundance.log"
+ - kraken:
+	"*.taxo.log"
+
+ - samtools
+ - picard
+ - gatk
+ - bcftools
+ - snpeff
