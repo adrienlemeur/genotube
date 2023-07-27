@@ -1,0 +1,9 @@
+referenceName = 		"mycobacterium_tuberculosis_ancestor"
+referenceSequence =		"data/reference_genomes/mycobacterium_tuberculosis/MTBC_ancestor.fa.gz"
+referenceAnnotation =		"data/reference_genomes/mycobacterium_tuberculosis/MTBC_ancestor.gff.gz"
+target_region =			false
+
+lineageSNP =			"data/TB-detective_data/lineageSNP_tbprofiler.txt"
+antibioSNP =			"data/TB-detective_data/antibio_resistance.txt"
+
+referenceSpecies =		"Mycobacterium tuberculosis"
