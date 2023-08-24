@@ -4,7 +4,7 @@ Version : Tokyo Drift
 
 <https://github.com/adrienlemeur/genotube-td/>
 
-Genotube is a genomic workflow for the study of Mycobacterium tuberculosis and affiliated species (only MTBC supported for now). It includes download, trimming, alignement, variant calling, lineage caracterrisation and antibioresistance predition for M. tuberculosis.
+Genotube is a genomic workflow for the study of Mycobacterium tuberculosis and affiliated species (only MTBC supported for now). It includes download, trimming, alignement, variant calling, lineage caracterisation and antibioresistance predition for M. tuberculosis.
 
 ## Installation
 Genotube requires :
@@ -13,7 +13,6 @@ Genotube requires :
 - A Linux AMD64 architecture
 
 Both Nextflow and Singularity can be installed with Conda or Mamba. Docker must be installed with root rights.
-
 
 ## Documentation
 

@@ -3,6 +3,7 @@
 nextflow.enable.dsl=2
 
 process profile {
+	label 'tbdetective'
 
 	input:
 	file(vcf)
@@ -18,7 +19,7 @@ process profile {
 	lineageSNP = file(params.lineageSNP)
 	antibioSNP = file(params.antibioSNP)
 	"""
-	TB-detective -i *.vcf.gz -lin $lineageSNP -ab $antibioSNP 2> /dev/null > all_strains_info.txt
+	TB-detective -i *.vcf.gz -lin /usr/local/TB-detective/TB-detective_data/antibio_resistance.txt -ab /usr/local/TB-detective/TB-detective_data/antibio_resistance.txt 2> /dev/null > all_strains_info.txt
 	cp all_strains_info.txt $results/all_strains_info.txt
 	"""
 }

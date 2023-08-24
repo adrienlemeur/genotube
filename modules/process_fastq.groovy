@@ -52,7 +52,7 @@ process single_readCleaning {
 	!mf.checkFile("$results/BAM", sample, "bam") && \
 	!mf.checkFile("$results/BAM/FILTERED", sample, "bam") && \
 	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") && \
-	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") ) || mf.checkFORCE('TRIM', params.FORCE)
+	!mf.checkFile("$results/VCF/FILTERED", sample, "vcf.gz") ) || mf.checkFORCE('TRIM', params.FORCE)
 
 	script:
 	"""
@@ -155,7 +155,7 @@ process taxoFilterSingle {
 	!mf.checkFile("$results/BAM", sample, "bam") && \
 	!mf.checkFile("$results/BAM/FILTERED", sample, "bam") && \
 	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") && \
-	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") ) || mf.checkFORCE('TRIM', params.FORCE)
+	!mf.checkFile("$results/VCF/FILTERED", sample, "vcf.gz") ) || mf.checkFORCE('TRIM', params.FORCE)
 
 	script:
 	"""
@@ -218,7 +218,7 @@ process paired_trimming {
 	!mf.checkFile("$results/BAM", sample, "bam") && \
 	!mf.checkFile("$results/BAM/FILTERED", sample, "bam") && \
 	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") && \
-	!mf.checkFile("$results/VCF/RAW", sample, "vcf.gz") ) || mf.checkFORCE('TRIM', params.FORCE)
+	!mf.checkFile("$results/VCF/FILTERED", sample, "vcf.gz") ) || mf.checkFORCE('TRIM', params.FORCE)
 
 	script:
 	"""
@@ -374,7 +374,7 @@ workflow process_fastq {
 					single: it[1].size() == 1
 				}.set{ temp }
 		} else if (mf.checkFORCE('TRIM', params.FORCE)) {
-			Channel.empty().branch{
+			Channel.empty().branch{f3/eead60
 				paired: it[1].size() == 2
 				single: it[1].size() == 1
 			}.set{ temp }

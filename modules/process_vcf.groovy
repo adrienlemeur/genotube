@@ -101,7 +101,7 @@ workflow process_vcf {
 		filterVariants(compress.out, index, results)
 
 		all_ann_vcf = compress.out
-		end_signal = all_ann_vcf.ifEmpty(true)
+		end_signal = all_ann_vcf
 	emit:
 		all_ann_vcf
 		all_raw_vcf = raw_vcf

@@ -225,8 +225,6 @@ workflow variant_calling {
 	take: index
 
 	main:
-		all_bam.view()
-
 		results = file(params.results)
 		file("$results/VCF/RAW").mkdirs()
 
