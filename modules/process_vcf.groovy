@@ -67,7 +67,7 @@ process filterVariants {
 	script:
 	"""
 	bcftools filter $vcf \
-		-i "MAX(INFO/AF)>0.95 && MAX(FORMAT/AD)>=5 && QUAL>30" \
+		-i "MAX(INFO/AF)>0.80 && MAX(FORMAT/AD)>=5 && QUAL>30" \
 		--SnpGap 2 --IndelGap 9 --soft-filter FAIL --mode x \
 		-Oz -o ${sample}.filtered.vcf.gz
 
