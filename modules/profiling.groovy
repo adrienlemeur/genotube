@@ -16,10 +16,10 @@ process profile {
 	params.taxonomy == 'barcode'
 
 	script:
-	lineageSNP = file(params.lineageSNP)
-	antibioSNP = file(params.antibioSNP)
+	lineageSNP = file(params.lineage_db)
+	antibioSNP = file(params.antibioresistance_db)
 	"""
-	TB-detective -i *.vcf.gz -lin /usr/local/TB-detective/TB-detective_data/antibio_resistance.txt -ab /usr/local/TB-detective/TB-detective_data/antibio_resistance.txt 2> /dev/null > all_strains_info.txt
+	TB-detective -i *.vcf.gz -lin $lineageSNP -ab $antibioSNP 2> /dev/null > all_strains_info.txt
 	cp all_strains_info.txt $results/all_strains_info.txt
 	"""
 }
