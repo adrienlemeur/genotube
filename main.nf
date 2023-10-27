@@ -41,7 +41,6 @@ mf = new myFunctions()
 
 workflow {
 	main:
-
 		mf.checkParameters(params.variant_caller, params.contam_check, params.species, params.taxonomy, params.tree_build, params.FORCE, params.SKIP, params.REMOVE, params.download_K2_DB)
 
 		initialisation()
@@ -58,6 +57,8 @@ workflow {
 			//TB-detective outputs only one file, switch back to several files or debug it
 			//VCF can be duplicated (does not know if it still exists)
 			//does not input bam check skip is not set
+
+			print(params.referenceSequence)
 
 			download()
 			process_fastq(download.out, index.out.samtools_picard)

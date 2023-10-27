@@ -21,5 +21,5 @@ GCF_020731305.codonTable: Mycobacterium
 
 H37Rv.NC_000962.3.codonTable : Mycobacterium
 MTBC_ancestor.NC_000962.3.codonTable : Mycobacterium
-mycobacterium_tuberculosis_ancestor.genome = Mycobacterium_tuberculosis
-mycobacterium_tuberculosis_ancestor.NC_000962.3.codonTable = Mycobacterium
+H37Rv.genome = Mycobacterium_tuberculosis
+H37Rv.NC_000962.3.codonTable = Mycobacterium
