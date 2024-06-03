@@ -19,7 +19,7 @@ process vcf2Fasta {
 	script:
 	"""
 	bcftools index $vcf
-	bcftools filter $vcf -i "(AF[0]>0.95 || AF[1] > 0.95) && (FORMAT/AD[:0]>=5 || FORMAT/AD[:1]>=5) && QUAL>30" --SnpGap 2 --IndelGap 9 | \
+	bcftools filter $vcf -i "MAX(INFO/AF)>0.80 && MAX(FORMAT/AD)>=5 && QUAL>30" --SnpGap 2 --IndelGap 9 | \
 		bcftools view -v snps,mnps -M2 -Oz -o ${sample}.onlySNP.vcf.gz
 
 	bcftools index ${sample}.onlySNP.vcf.gz
